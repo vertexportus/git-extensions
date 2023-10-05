@@ -1,19 +1,25 @@
 package clip
 
 import (
-	"fmt"
-	"git_extensions/shared"
 	"os"
+
+	"github.com/spf13/cobra"
 )
 
-func Run() {
-	shared.ClipboardInit()
+// rootCmd represents the base command when called without any subcommands
+var rootCmd = &cobra.Command{
+	Use:   "git-clip",
+	Short: "Clipboard operations for git",
+	Long:  ``,
+}
 
-	branch, err := shared.GitCurrentBranch()
+func Run() {
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
+	err := rootCmd.Execute()
 	if err != nil {
-		fmt.Println(err)
 		os.Exit(1)
 	}
+}
 
-	shared.ClipboardWrite(branch)
+func init() {
 }
