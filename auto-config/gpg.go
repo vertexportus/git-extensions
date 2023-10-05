@@ -18,9 +18,6 @@ func GetGpgKeys() ([]GpgKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	if gpgExec == "" {
-		gpgExec = "gpg"
-	}
 	// list keys
 	cmd := exec.Command(gpgExec, "--list-secret-keys", "--keyid-format", "LONG")
 	output, err := cmd.Output()
