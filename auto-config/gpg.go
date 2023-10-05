@@ -55,5 +55,9 @@ func getGpgExecPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strings.Trim(string(output), "\n"), nil
+	cleanOutput := strings.Trim(string(output), "\n")
+	if cleanOutput == "" {
+		return "gpg", nil
+	}
+	return cleanOutput, nil
 }
