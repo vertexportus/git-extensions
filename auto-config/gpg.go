@@ -1,9 +1,9 @@
 package auto_config
 
 import (
+	"git_extensions/shared"
 	"os/exec"
 	"regexp"
-	"strings"
 )
 
 type GpgKey struct {
@@ -52,7 +52,7 @@ func getGpgExecPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	cleanOutput := strings.Trim(string(output), "\n")
+	cleanOutput := shared.TrimExecOutput(output)
 	if cleanOutput == "" {
 		return "gpg", nil
 	}
