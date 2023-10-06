@@ -1,7 +1,7 @@
 package auto_config
 
 import (
-	"git_extensions/shared"
+	strs "git_extensions/shared/strings"
 	"os/exec"
 	"regexp"
 )
@@ -52,7 +52,7 @@ func getGpgExecPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	cleanOutput := shared.TrimExecOutput(output)
+	cleanOutput := strs.TrimExecOutput(output)
 	if cleanOutput == "" {
 		return "gpg", nil
 	}

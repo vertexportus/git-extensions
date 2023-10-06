@@ -2,7 +2,8 @@ package auto_config
 
 import (
 	"fmt"
-	"git_extensions/shared"
+	"git_extensions/shared/errors"
+	"git_extensions/shared/git"
 	"github.com/charmbracelet/bubbles/list"
 	"os"
 )
@@ -20,34 +21,28 @@ func Run() {
 
 	var gpgKey GpgKey
 	gpgKey, err = ChooseFromList(items, "Select GPG key to configure")
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	errors.HandleError(err)
 
 	err = gitConfig(gpgKey)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	errors.HandleError(err)
 }
 
 func gitConfig(gpgKey GpgKey) error {
 	var err error
 
-	err = shared.GitUpdateConfig("user.name", gpgKey.Name)
+	err = git.UpdateConfig("user.name", gpgKey.Name)
 	if err != nil {
 		return err
 	}
-	err = shared.GitUpdateConfig("user.email", gpgKey.Email)
+	err = git.UpdateConfig("user.email", gpgKey.Email)
 	if err != nil {
 		return err
 	}
-	err = shared.GitUpdateConfig("user.signingkey", gpgKey.Key)
+	err = git.UpdateConfig("user.signingkey", gpgKey.Key)
 	if err != nil {
 		return err
 	}
-	err = shared.GitUpdateConfig("commit.gpgsign", "true")
+	err = git.UpdateConfig("commit.gpgsign", "true")
 	if err != nil {
 		return err
 	}
