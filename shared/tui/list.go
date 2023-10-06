@@ -1,4 +1,4 @@
-package auto_config
+package tui
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func ChooseFromList(items []list.Item, title string) (GpgKey, error) {
+func ChooseFromList(items []list.Item, title string) (ListItemValue, error) {
 	l := list.New(items, itemDelegate{}, defaultWidth, listHeight)
 	l.Title = title
 	l.SetShowStatusBar(false)
@@ -22,7 +22,7 @@ func ChooseFromList(items []list.Item, title string) (GpgKey, error) {
 
 	response, err := tea.NewProgram(m).Run()
 	if err != nil {
-		return GpgKey{}, err
+		return itemDelegate{}, err
 	}
 	return response.(model).choice.value, nil
 }
@@ -45,18 +45,23 @@ var (
 
 // ############################################################################################################ List ###
 
+type ListItemValue interface{}
 type itemDelegate struct{}
-type item struct {
+type ListItem[V ListItemValue] struct {
 	label string
-	value GpgKey
+	value V
 }
 
-func (i item) FilterValue() string                             { return "" }
+func NewListItem(label string, value ListItemValue) ListItem[ListItemValue] {
+	return ListItem[ListItemValue]{label: label, value: value}
+}
+
+func (i ListItem[ListItemValue]) FilterValue() string          { return "" }
 func (d itemDelegate) Height() int                             { return 1 }
 func (d itemDelegate) Spacing() int                            { return 0 }
 func (d itemDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	i, ok := listItem.(item)
+	i, ok := listItem.(ListItem[ListItemValue])
 	if !ok {
 		return
 	}
@@ -78,7 +83,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 
 type model struct {
 	list     list.Model
-	choice   item
+	choice   ListItem[ListItemValue]
 	quitting bool
 }
 
@@ -95,7 +100,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case "enter", " ":
-			i, ok := m.list.SelectedItem().(item)
+			i, ok := m.list.SelectedItem().(ListItem[ListItemValue])
 			if ok {
 				m.choice = i
 				return m, tea.Quit
@@ -109,7 +114,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	nilItem := item{}
+	nilItem := ListItem[ListItemValue]{}
 	if m.choice != nilItem {
 		return fmt.Sprintf("%s%s\n",
 			quitTextStyle.Render("Configuring git with: "),

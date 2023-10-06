@@ -5,6 +5,7 @@ import (
 	"git_extensions/shared/errors"
 	"git_extensions/shared/git"
 	"github.com/spf13/cobra"
+	"strings"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -25,10 +26,12 @@ var rootCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("search called: %s\n\n", args[0])
-		branches, err := git.Branches(false, false)
+		allBranches, err := git.Branches(false, false)
 		errors.HandleError(err)
-		fmt.Println(branches)
+		branches := filterBySearchValue(allBranches, args[0])
+		for _, branch := range branches {
+			fmt.Println(branch)
+		}
 	},
 }
 
@@ -36,4 +39,14 @@ func Run() {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 	err := rootCmd.Execute()
 	errors.HandleError(err)
+}
+
+func filterBySearchValue(branches []string, searchValue string) []string {
+	var filteredBranches []string
+	for _, branch := range branches {
+		if strings.Contains(branch, searchValue) {
+			filteredBranches = append(filteredBranches, branch)
+		}
+	}
+	return filteredBranches
 }

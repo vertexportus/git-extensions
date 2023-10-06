@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"git_extensions/shared/errors"
 	"git_extensions/shared/git"
+	"git_extensions/shared/tui"
 	"github.com/charmbracelet/bubbles/list"
 	"os"
 )
@@ -16,14 +17,14 @@ func Run() {
 	}
 	items := make([]list.Item, len(gpgKeys))
 	for i, entry := range gpgKeys {
-		items[i] = item{label: fmt.Sprintf("%s <%s>", entry.Name, entry.Email), value: entry}
+		items[i] = tui.NewListItem(fmt.Sprintf("%s <%s>", entry.Name, entry.Email), entry)
 	}
 
-	var gpgKey GpgKey
-	gpgKey, err = ChooseFromList(items, "Select GPG key to configure")
+	var gpgKeyListItem tui.ListItemValue
+	gpgKeyListItem, err = tui.ChooseFromList(items, "Select GPG key to configure")
 	errors.HandleError(err)
 
-	err = gitConfig(gpgKey)
+	err = gitConfig(gpgKeyListItem.(GpgKey))
 	errors.HandleError(err)
 }
 
