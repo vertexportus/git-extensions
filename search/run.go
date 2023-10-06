@@ -26,24 +26,11 @@ var rootCmd = &cobra.Command{
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		// get branches
-		allBranches, err := git.Branches(false, false)
-		errors.HandleError(err)
-
-		// filter branches by searchValue - if any
-		var branches []string
-		if len(args) == 0 {
-			branches = allBranches
-		} else {
-			branches = filterBySearchValue(allBranches, args[0])
+		searchValue := ""
+		if len(args) > 0 {
+			searchValue = args[0]
 		}
-
-		// do list menu
-		branch := pickFromListMenu(branches)
-		if branch == "" {
-			fmt.Println("No branch selected")
-			os.Exit(1)
-		}
+		branch := Branch(searchValue)
 		fmt.Println(branch)
 	},
 }
@@ -52,6 +39,28 @@ func Run() {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 	err := rootCmd.Execute()
 	errors.HandleError(err)
+}
+
+func Branch(searchValue string) string {
+	// get branches
+	allBranches, err := git.Branches(false, false)
+	errors.HandleError(err)
+
+	// filter branches by searchValue - if any
+	var branches []string
+	if searchValue == "" {
+		branches = allBranches
+	} else {
+		branches = filterBySearchValue(allBranches, searchValue)
+	}
+
+	// do list menu
+	branch := pickFromListMenu(branches)
+	if branch == "" {
+		fmt.Println("No branch selected")
+		os.Exit(1)
+	}
+	return branch
 }
 
 func pickFromListMenu(branches []string) string {
