@@ -9,11 +9,21 @@ import (
 	"strings"
 )
 
-func ChooseFromList(items []list.Item, title string) (ListItemValue, error) {
-	l := list.New(items, itemDelegate{}, defaultWidth, listHeight)
-	l.Title = title
-	l.SetShowStatusBar(false)
-	l.SetFilteringEnabled(false)
+type ListConfig struct {
+	Title            string
+	Items            []list.Item
+	Width            int
+	Height           int
+	ShowStatusBar    bool
+	FilteringEnabled bool
+}
+
+func ChooseFromList(config ListConfig) (ListItemValue, error) {
+	handleConfigDefaults(&config)
+	l := list.New(config.Items, itemDelegate{}, config.Width, config.Height)
+	l.Title = config.Title
+	l.SetShowStatusBar(config.ShowStatusBar)
+	l.SetFilteringEnabled(config.FilteringEnabled)
 	l.Styles.Title = titleStyle
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
@@ -25,6 +35,15 @@ func ChooseFromList(items []list.Item, title string) (ListItemValue, error) {
 		return itemDelegate{}, err
 	}
 	return response.(model).choice.value, nil
+}
+
+func handleConfigDefaults(config *ListConfig) {
+	if config.Width == 0 {
+		config.Width = defaultWidth
+	}
+	if config.Height == 0 {
+		config.Height = listHeight
+	}
 }
 
 // ####################################################################################################### Constants ###
