@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"git_extensions/shared/errors"
 	"git_extensions/shared/git"
+	"git_extensions/shared/tui"
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/spf13/cobra"
+	"os"
 	"strings"
 )
 
@@ -17,21 +20,31 @@ var rootCmd = &cobra.Command{
 	It also allows for some shorthand operations on top of found results,
 	like merges to current, or checkout and pull`,
 	Args: func(cmd *cobra.Command, args []string) error {
-		if err := cobra.MinimumNArgs(1)(cmd, args); err != nil {
-			return err
-		}
 		if err := cobra.MaximumNArgs(1)(cmd, args); err != nil {
 			return err
 		}
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
+		// get branches
 		allBranches, err := git.Branches(false, false)
 		errors.HandleError(err)
-		branches := filterBySearchValue(allBranches, args[0])
-		for _, branch := range branches {
-			fmt.Println(branch)
+
+		// filter branches by searchValue - if any
+		var branches []string
+		if len(args) == 0 {
+			branches = allBranches
+		} else {
+			branches = filterBySearchValue(allBranches, args[0])
 		}
+
+		// do list menu
+		branch := pickFromListMenu(branches)
+		if branch == "" {
+			fmt.Println("No branch selected")
+			os.Exit(1)
+		}
+		fmt.Println(branch)
 	},
 }
 
@@ -39,6 +52,21 @@ func Run() {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 	err := rootCmd.Execute()
 	errors.HandleError(err)
+}
+
+func pickFromListMenu(branches []string) string {
+	items := make([]list.Item, len(branches))
+	for i, branch := range branches {
+		items[i] = tui.NewListSimpleItem(branch)
+	}
+	branchListItem, err := tui.ChooseFromList(
+		&tui.ListConfig{Title: "Select branch", Items: items, SuppressQuitText: true})
+	errors.HandleError(err)
+
+	if branchListItem == nil {
+		return ""
+	}
+	return branchListItem.(string)
 }
 
 func filterBySearchValue(branches []string, searchValue string) []string {

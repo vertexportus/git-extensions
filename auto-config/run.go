@@ -21,7 +21,7 @@ func Run() {
 	}
 
 	var gpgKeyListItem tui.ListItemValue
-	gpgKeyListItem, err = tui.ChooseFromList(tui.ListConfig{Title: "Select GPG key to configure", Items: items})
+	gpgKeyListItem, err = tui.ChooseFromList(&tui.ListConfig{Title: "Select GPG key to configure", Items: items})
 	errors.HandleError(err)
 
 	err = gitConfig(gpgKeyListItem.(GpgKey))

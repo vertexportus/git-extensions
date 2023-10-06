@@ -16,10 +16,15 @@ type ListConfig struct {
 	Height           int
 	ShowStatusBar    bool
 	FilteringEnabled bool
+
+	SelectedItemText string
+	CancelText       string
+
+	SuppressQuitText bool
 }
 
-func ChooseFromList(config ListConfig) (ListItemValue, error) {
-	handleConfigDefaults(&config)
+func ChooseFromList(config *ListConfig) (ListItemValue, error) {
+	handleConfigDefaults(config)
 	l := list.New(config.Items, itemDelegate{}, config.Width, config.Height)
 	l.Title = config.Title
 	l.SetShowStatusBar(config.ShowStatusBar)
@@ -28,7 +33,7 @@ func ChooseFromList(config ListConfig) (ListItemValue, error) {
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
 
-	m := model{list: l}
+	m := model{list: l, config: config}
 
 	response, err := tea.NewProgram(m).Run()
 	if err != nil {
@@ -43,6 +48,14 @@ func handleConfigDefaults(config *ListConfig) {
 	}
 	if config.Height == 0 {
 		config.Height = listHeight
+	}
+
+	if config.SelectedItemText == "" {
+		config.SelectedItemText = "Selected item: "
+	}
+
+	if config.CancelText == "" {
+		config.CancelText = "Cancelled"
 	}
 }
 
@@ -71,6 +84,9 @@ type ListItem[V ListItemValue] struct {
 	value V
 }
 
+func NewListSimpleItem(value string) ListItem[ListItemValue] {
+	return ListItem[ListItemValue]{label: value, value: value}
+}
 func NewListItem(label string, value ListItemValue) ListItem[ListItemValue] {
 	return ListItem[ListItemValue]{label: label, value: value}
 }
@@ -102,6 +118,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 
 type model struct {
 	list     list.Model
+	config   *ListConfig
 	choice   ListItem[ListItemValue]
 	quitting bool
 }
@@ -135,12 +152,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() string {
 	nilItem := ListItem[ListItemValue]{}
 	if m.choice != nilItem {
+		if m.config.SuppressQuitText {
+			return ""
+		}
 		return fmt.Sprintf("%s%s\n",
-			quitTextStyle.Render("Configuring git with: "),
+			quitTextStyle.Render(m.config.SelectedItemText),
 			selectedItemStyle.Render(m.choice.label))
 	}
 	if m.quitting {
-		return quitTextStyle.Render("Canceling auto-config!")
+		if m.config.SuppressQuitText {
+			return ""
+		}
+		return quitTextStyle.Render(m.config.CancelText)
 	}
 	return "\n" + m.list.View()
 }
