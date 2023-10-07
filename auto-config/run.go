@@ -4,47 +4,46 @@ import (
 	"fmt"
 	"git_extensions/shared/errors"
 	"git_extensions/shared/git"
-	"git_extensions/shared/tui"
-	"github.com/charmbracelet/bubbles/list"
-	"os"
+	"git_extensions/shared/tui/list"
+	blist "github.com/charmbracelet/bubbles/list"
 )
 
 func Run() {
 	gpgKeys, err := GetGpgKeys()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	items := make([]list.Item, len(gpgKeys))
+	errors.HandleError(err)
+
+	items := make([]blist.Item, len(gpgKeys))
 	for i, entry := range gpgKeys {
-		items[i] = tui.NewListItem(fmt.Sprintf("%s <%s>", entry.Name, entry.Email), entry)
+		items[i] = list.NewListItem(fmt.Sprintf("%s <%s>", entry.Name, entry.Email), entry)
 	}
 
-	var gpgKeyListItem tui.ListItemValue
-	gpgKeyListItem, err = tui.ChooseFromList(&tui.ListConfig{Title: "Select GPG key to configure", Items: items})
+	var gpgKeyListItem list.ItemValue
+	gpgKeyListItem, err = list.Choose(&list.Config{Title: "Select GPG key to configure", Items: items})
 	errors.HandleError(err)
 
 	err = gitConfig(gpgKeyListItem.(GpgKey))
 	errors.HandleError(err)
 }
 
-func gitConfig(gpgKey GpgKey) error {
-	var err error
+//func runSpinner() {
+//	spinnerConfig := spinner.Config{
+//		Label:   "Loading GPG keys...",
+//		Spinner: bspinner.MiniDot,
+//	}
+//	spinnerRef = spinner.Show(&spinnerConfig)
+//}
 
-	err = git.UpdateConfig("user.name", gpgKey.Name)
-	if err != nil {
+func gitConfig(gpgKey GpgKey) error {
+	if err := git.UpdateConfig("user.name", gpgKey.Name); err != nil {
 		return err
 	}
-	err = git.UpdateConfig("user.email", gpgKey.Email)
-	if err != nil {
+	if err := git.UpdateConfig("user.email", gpgKey.Email); err != nil {
 		return err
 	}
-	err = git.UpdateConfig("user.signingkey", gpgKey.Key)
-	if err != nil {
+	if err := git.UpdateConfig("user.signingkey", gpgKey.Key); err != nil {
 		return err
 	}
-	err = git.UpdateConfig("commit.gpgsign", "true")
-	if err != nil {
+	if err := git.UpdateConfig("commit.gpgsign", "true"); err != nil {
 		return err
 	}
 

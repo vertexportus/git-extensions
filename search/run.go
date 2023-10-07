@@ -4,12 +4,18 @@ import (
 	"fmt"
 	"git_extensions/shared/errors"
 	"git_extensions/shared/git"
-	"git_extensions/shared/tui"
+	list2 "git_extensions/shared/tui/list"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/spf13/cobra"
 	"os"
+	"os/exec"
 	"strings"
 )
+
+var checkout bool
+var pull bool
+
+//var merge bool
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -31,8 +37,37 @@ var rootCmd = &cobra.Command{
 			searchValue = args[0]
 		}
 		branch := Branch(searchValue)
+
+		if checkout {
+			cmd := exec.Command("git", "checkout", branch)
+			output, err := cmd.Output()
+			errors.HandleError(err)
+			fmt.Println(string(output))
+			if pull {
+				fmt.Println(" ___ Pulling...")
+				cmd := exec.Command("git", "pull")
+				output, err := cmd.Output()
+				errors.HandleError(err)
+				fmt.Println(string(output))
+			}
+		}
 		fmt.Println(branch)
 	},
+}
+
+func init() {
+	rootCmd.Flags().BoolVarP(
+		&checkout,
+		"checkout",
+		"c",
+		false,
+		"checkout to selected branch")
+	rootCmd.Flags().BoolVarP(
+		&pull,
+		"pull",
+		"p",
+		false,
+		"pulls selected branch (either after checkout, or before merge)")
 }
 
 func Run() {
@@ -66,10 +101,10 @@ func Branch(searchValue string) string {
 func pickFromListMenu(branches []string) string {
 	items := make([]list.Item, len(branches))
 	for i, branch := range branches {
-		items[i] = tui.NewListSimpleItem(branch)
+		items[i] = list2.NewListSimpleItem(branch)
 	}
-	branchListItem, err := tui.ChooseFromList(
-		&tui.ListConfig{Title: "Select branch", Items: items, SuppressQuitText: true})
+	branchListItem, err := list2.ChooseFromList(
+		&list2.ListConfig{Title: "Select branch", Items: items, SuppressQuitText: true})
 	errors.HandleError(err)
 
 	if branchListItem == nil {

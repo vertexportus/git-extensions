@@ -1,4 +1,4 @@
-package tui
+package list
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-type ListConfig struct {
+type Config struct {
 	Title            string
 	Items            []list.Item
 	Width            int
@@ -23,7 +23,7 @@ type ListConfig struct {
 	SuppressQuitText bool
 }
 
-func ChooseFromList(config *ListConfig) (ListItemValue, error) {
+func Choose(config *Config) (ItemValue, error) {
 	handleConfigDefaults(config)
 	l := list.New(config.Items, itemDelegate{}, config.Width, config.Height)
 	l.Title = config.Title
@@ -42,7 +42,7 @@ func ChooseFromList(config *ListConfig) (ListItemValue, error) {
 	return response.(model).choice.value, nil
 }
 
-func handleConfigDefaults(config *ListConfig) {
+func handleConfigDefaults(config *Config) {
 	if config.Width == 0 {
 		config.Width = defaultWidth
 	}
@@ -77,26 +77,26 @@ var (
 
 // ############################################################################################################ List ###
 
-type ListItemValue interface{}
+type ItemValue interface{}
 type itemDelegate struct{}
-type ListItem[V ListItemValue] struct {
+type Item[V ItemValue] struct {
 	label string
 	value V
 }
 
-func NewListSimpleItem(value string) ListItem[ListItemValue] {
-	return ListItem[ListItemValue]{label: value, value: value}
+func NewListSimpleItem(value string) Item[ItemValue] {
+	return Item[ItemValue]{label: value, value: value}
 }
-func NewListItem(label string, value ListItemValue) ListItem[ListItemValue] {
-	return ListItem[ListItemValue]{label: label, value: value}
+func NewListItem(label string, value ItemValue) Item[ItemValue] {
+	return Item[ItemValue]{label: label, value: value}
 }
 
-func (i ListItem[ListItemValue]) FilterValue() string          { return "" }
+func (i Item[ListItemValue]) FilterValue() string              { return "" }
 func (d itemDelegate) Height() int                             { return 1 }
 func (d itemDelegate) Spacing() int                            { return 0 }
 func (d itemDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	i, ok := listItem.(ListItem[ListItemValue])
+	i, ok := listItem.(Item[ItemValue])
 	if !ok {
 		return
 	}
@@ -118,8 +118,8 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 
 type model struct {
 	list     list.Model
-	config   *ListConfig
-	choice   ListItem[ListItemValue]
+	config   *Config
+	choice   Item[ItemValue]
 	quitting bool
 }
 
@@ -136,7 +136,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case "enter", " ":
-			i, ok := m.list.SelectedItem().(ListItem[ListItemValue])
+			i, ok := m.list.SelectedItem().(Item[ItemValue])
 			if ok {
 				m.choice = i
 				return m, tea.Quit
@@ -150,7 +150,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	nilItem := ListItem[ListItemValue]{}
+	nilItem := Item[ItemValue]{}
 	if m.choice != nilItem {
 		if m.config.SuppressQuitText {
 			return ""
