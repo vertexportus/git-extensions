@@ -1,17 +1,30 @@
 package auto_config
 
 import (
+	"fmt"
 	"git_extensions/shared/errors"
 	"git_extensions/shared/git"
 	"git_extensions/shared/tui/list"
+	"git_extensions/shared/tui/spinner"
+	spinnerBase "github.com/charmbracelet/bubbles/spinner"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
-func Run() {
-	gpgKeys, err := GetGpgKeys()
-	errors.HandleError(err)
+var gpgKeys []GpgKey
 
-	var gpgKeyListItem any
-	gpgKeyListItem, err = list.Choose[GpgKey](gpgKeys, &list.Config{Title: "Select GPG key"})
+func Run() {
+	spinner.Show(&spinner.Config{
+		Label:   "Loading GPG keys...",
+		Spinner: spinnerBase.MiniDot,
+		Cmd:     getGpgKeys,
+	})
+
+	if len(gpgKeys) == 0 {
+		fmt.Println("No GPG keys found")
+		return
+	}
+
+	gpgKeyListItem, err := list.Choose[GpgKey](gpgKeys, &list.Config{Title: "Select GPG key"})
 	errors.HandleError(err)
 	if gpgKeyListItem == nil {
 		return
@@ -21,13 +34,12 @@ func Run() {
 	errors.HandleError(err)
 }
 
-//func runSpinner() {
-//	spinnerConfig := spinner.Config{
-//		Label:   "Loading GPG keys...",
-//		Spinner: bspinner.MiniDot,
-//	}
-//	spinnerRef = spinner.Show(&spinnerConfig)
-//}
+func getGpgKeys(channel chan<- tea.Cmd) {
+	var err error
+	gpgKeys, err = GetGpgKeys()
+	errors.HandleError(err)
+	close(channel)
+}
 
 func gitConfig(gpgKey GpgKey) error {
 	if err := git.UpdateConfig("user.name", gpgKey.Name); err != nil {

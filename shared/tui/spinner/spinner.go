@@ -2,10 +2,10 @@ package spinner
 
 import (
 	"fmt"
+	"git_extensions/shared/errors"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"os"
 )
 
 // ################################################################################################## Public/Configs ###
@@ -14,26 +14,25 @@ type Config struct {
 	Label   string
 	Spinner spinner.Spinner
 	Color   lipgloss.TerminalColor
-	quit    bool
+	Cmd     func(channel chan<- tea.Cmd)
 }
 
-type Spinner struct {
-	teaProgram *tea.Program
+func Show(config *Config) {
+	p := tea.NewProgram(model{
+		spinner: createModel(config),
+		config:  config,
+		channel: make(chan tea.Cmd)})
+	if _, err := p.Run(); err != nil {
+		errors.HandleError(err)
+	}
 }
 
-func Show(config *Config) Spinner {
+func createModel(config *Config) spinner.Model {
 	handleConfigDefaults(config)
 	s := spinner.New()
 	s.Spinner = config.Spinner
 	s.Style = lipgloss.NewStyle().Foreground(config.Color)
-
-	p := tea.NewProgram(model{spinner: s, config: config})
-	if _, err := p.Run(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	return Spinner{teaProgram: p}
+	return s
 }
 
 func handleConfigDefaults(config *Config) {
@@ -45,11 +44,6 @@ func handleConfigDefaults(config *Config) {
 	}
 }
 
-func (c *Config) Quit() {
-	c.quit = true
-	//s.teaProgram.Send(tea.QuitMsg{})
-}
-
 // ####################################################################################################### Constants ###
 var (
 	defaultSpinner = spinner.Dot
@@ -58,27 +52,22 @@ var (
 
 // ######################################################################################################### Spinner ###
 
-type errMsg error
-
 type model struct {
 	config   *Config
 	spinner  spinner.Model
 	quitting bool
-	err      error
+	channel  chan tea.Cmd
 }
 
-func (m model) Tick() tea.Msg {
-	if m.config.quit {
-		return tea.QuitMsg{}
+func (m model) Init() tea.Cmd {
+	if m.config.Cmd != nil {
+		go m.config.Cmd(m.channel)
 	}
 	return m.spinner.Tick
 }
 
-func (m model) Init() tea.Cmd {
-	return m.Tick
-}
-
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// run through messages
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -88,15 +77,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		default:
 			return m, nil
 		}
-
-	case errMsg:
-		m.err = msg
-		return m, nil
-
 	case tea.QuitMsg:
+		m.quitting = true
 		return m, tea.Quit
 
 	default:
+		// check command channel
+		select {
+		case cmd, ok := <-m.channel:
+			if !ok {
+				return m, tea.Quit
+			}
+			return m, cmd
+		default:
+		}
+		// default to updating spinner
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
@@ -104,12 +99,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	if m.err != nil {
-		return m.err.Error()
-	}
-	str := fmt.Sprintf("\n\n   %s Loading forever...press q to quit\n\n", m.spinner.View())
 	if m.quitting {
-		return str + "\n"
+		return ""
 	}
-	return str
+	return fmt.Sprintf("   %s %s", m.spinner.View(), m.config.Label)
 }
