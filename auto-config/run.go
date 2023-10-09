@@ -1,25 +1,21 @@
 package auto_config
 
 import (
-	"fmt"
 	"git_extensions/shared/errors"
 	"git_extensions/shared/git"
 	"git_extensions/shared/tui/list"
-	blist "github.com/charmbracelet/bubbles/list"
 )
 
 func Run() {
 	gpgKeys, err := GetGpgKeys()
 	errors.HandleError(err)
 
-	items := make([]blist.Item, len(gpgKeys))
-	for i, entry := range gpgKeys {
-		items[i] = list.NewListItem(fmt.Sprintf("%s <%s>", entry.Name, entry.Email), entry)
-	}
-
-	var gpgKeyListItem list.ItemValue
-	gpgKeyListItem, err = list.Choose(&list.Config{Title: "Select GPG key to configure", Items: items})
+	var gpgKeyListItem any
+	gpgKeyListItem, err = list.Choose[GpgKey](gpgKeys, &list.Config{Title: "Select GPG key"})
 	errors.HandleError(err)
+	if gpgKeyListItem == nil {
+		return
+	}
 
 	err = gitConfig(gpgKeyListItem.(GpgKey))
 	errors.HandleError(err)

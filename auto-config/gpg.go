@@ -1,6 +1,7 @@
 package auto_config
 
 import (
+	"fmt"
 	strs "git_extensions/shared/strings"
 	"os/exec"
 	"regexp"
@@ -10,6 +11,10 @@ type GpgKey struct {
 	Name  string
 	Email string
 	Key   string
+}
+
+func (k GpgKey) String() string {
+	return fmt.Sprintf("%s <%s>", k.Name, k.Email)
 }
 
 func GetGpgKeys() ([]GpgKey, error) {

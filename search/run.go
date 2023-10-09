@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"git_extensions/shared/errors"
 	"git_extensions/shared/git"
-	list2 "git_extensions/shared/tui/list"
-	"github.com/charmbracelet/bubbles/list"
+	"git_extensions/shared/tui/list"
 	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
@@ -91,26 +90,23 @@ func Branch(searchValue string) string {
 
 	// do list menu
 	branch := pickFromListMenu(branches)
-	if branch == "" {
+	if branch == nil {
 		fmt.Println("No branch selected")
 		os.Exit(1)
 	}
-	return branch
+	return branch.(string)
 }
 
-func pickFromListMenu(branches []string) string {
-	items := make([]list.Item, len(branches))
-	for i, branch := range branches {
-		items[i] = list2.NewListSimpleItem(branch)
-	}
-	branchListItem, err := list2.ChooseFromList(
-		&list2.ListConfig{Title: "Select branch", Items: items, SuppressQuitText: true})
+func pickFromListMenu(branches []string) any {
+	branchListItem, err := list.Choose(
+		branches,
+		&list.Config{Title: "Select branch", SuppressQuitText: true})
 	errors.HandleError(err)
 
-	if branchListItem == nil {
+	if branchListItem == "" {
 		return ""
 	}
-	return branchListItem.(string)
+	return branchListItem
 }
 
 func filterBySearchValue(branches []string, searchValue string) []string {
