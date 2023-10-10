@@ -8,13 +8,16 @@ import (
 	"git_extensions/shared/tui/spinner"
 	spinnerBase "github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/erikgeiser/promptkit/confirmation"
 	"github.com/spf13/cobra"
 )
 
-var gpgUse bool
-var gpgSign bool
-var name string
-var email string
+var argGpgUse bool
+var argGpgSign bool
+var argName string
+var argEmail string
+var forceYes bool
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -22,44 +25,72 @@ var rootCmd = &cobra.Command{
 	Short: "Helper to auto-config local git repo",
 	Long:  `Helper to auto-config local git repo`,
 	Args: func(cmd *cobra.Command, args []string) error {
-		if gpgSign && !gpgUse {
+		if argGpgSign && !argGpgUse {
 			return fmt.Errorf("sign option requires gpg")
 		}
-		if !gpgUse && (name == "" || email == "") {
+		if !argGpgUse && (argName == "" || argEmail == "") {
 			return fmt.Errorf("name and email required if not using GPG source")
 		}
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		run()
+		// just set config if not using GPG
+		var name string
+		var email string
+		var gpgKey string
+		var sign bool
+
+		if argGpgUse {
+			var cancel bool
+			cancel, name, email, gpgKey, sign = chooseGpgKey()
+			if cancel {
+				return
+			}
+		} else {
+			name = argName
+			email = argEmail
+		}
+
+		if forceYes || confirm(name, email, sign) {
+			err := gitConfig(name, email, gpgKey, sign)
+			errors.HandleError(err)
+		} else {
+			fmt.Println("Aborted")
+		}
 	},
 }
 
 func init() {
 	rootCmd.Flags().BoolVarP(
-		&gpgUse,
+		&argGpgUse,
 		"gpg",
 		"g",
 		true,
 		"(default TRUE) List GPG keys to use (also grabs name and email)")
 	rootCmd.Flags().BoolVarP(
-		&gpgSign,
+		&argGpgSign,
 		"sign",
 		"s",
 		false,
 		"Configure git to auto-sign commits")
 	rootCmd.Flags().StringVarP(
-		&name,
+		&argName,
 		"name",
 		"n",
 		"",
 		"Name to configure (overrides GPG option)")
 	rootCmd.Flags().StringVarP(
-		&email,
+		&argEmail,
 		"email",
 		"e",
 		"",
 		"Email to configure (overrides GPG option)")
+	rootCmd.Flags().BoolVarP(
+		&forceYes,
+		"yes",
+		"y",
+		false,
+		"Force yes to prompts")
 }
 
 var gpgKeys []GpgKey
@@ -70,15 +101,35 @@ func Run() {
 	errors.HandleError(err)
 }
 
-func run() {
-	// just set config if not using GPG
-	if !gpgUse {
-		err := gitConfig(name, email, "", false)
-		errors.HandleError(err)
-		return
-	}
+var (
+	confirmLabelStyle = lipgloss.NewStyle().PaddingLeft(2).Width(24).Foreground(lipgloss.Color("107"))
+	confirmValueStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("170"))
+)
 
-	// load GPG Keys, showing a spinner anim...
+func confirm(name string, email string, sign bool) bool {
+	fmt.Println("Configuring git with:")
+	fmt.Println(
+		lipgloss.JoinHorizontal(0,
+			confirmLabelStyle.Render("Name:"),
+			confirmValueStyle.Render(name)))
+	fmt.Println(
+		lipgloss.JoinHorizontal(0,
+			confirmLabelStyle.Render("Email:"),
+			confirmValueStyle.Render(email)))
+	fmt.Println(
+		lipgloss.JoinHorizontal(0,
+			confirmLabelStyle.Render("Commit auto-signing:"),
+			confirmValueStyle.Render(fmt.Sprintf("%t", sign))))
+	fmt.Println("")
+
+	input := confirmation.New("Are you ready?", confirmation.Yes)
+	confirmed, err := input.RunPrompt()
+	errors.HandleError(err)
+	return confirmed
+}
+
+func chooseGpgKey() (bool, string, string, string, bool) {
+	// load GPG Keys, showing a spinner animation
 	spinner.Show(&spinner.Config{
 		Label:   "Loading GPG keys...",
 		Spinner: spinnerBase.MiniDot,
@@ -88,20 +139,20 @@ func run() {
 	// finished animation, means gpgKey retrieval finished
 	if len(gpgKeys) == 0 {
 		fmt.Println("No GPG keys found")
-		return
+		return true, "", "", "", false
 	}
 
-	// render list menu to choose GPG key, quit if none choosen
-	gpgKeyListItem, err := list.Choose[GpgKey](gpgKeys, &list.Config{Title: "Select GPG key"})
+	// render list menu to choose GPG key, quit if none chosen
+	gpgKeyListItem, err := list.Choose[GpgKey](
+		gpgKeys,
+		&list.Config{Title: "Select GPG key", SuppressQuitText: true})
 	errors.HandleError(err)
 	if gpgKeyListItem == nil {
-		return
+		return true, "", "", "", false
 	}
 
-	// configure based on choice
 	gpgKey := gpgKeyListItem.(GpgKey)
-	err = gitConfig(gpgKey.Name, gpgKey.Email, gpgKey.Key, gpgSign)
-	errors.HandleError(err)
+	return false, gpgKey.Name, gpgKey.Email, gpgKey.Key, argGpgSign
 }
 
 func getGpgKeys(channel chan<- tea.Cmd) {
