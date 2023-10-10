@@ -66,7 +66,7 @@ func init() {
 		"gpg",
 		"g",
 		true,
-		"(default TRUE) List GPG keys to use (also grabs name and email)")
+		"List GPG keys to use (also selects name and email)")
 	rootCmd.Flags().BoolVarP(
 		&argGpgSign,
 		"sign",
@@ -78,13 +78,13 @@ func init() {
 		"name",
 		"n",
 		"",
-		"Name to configure (overrides GPG option)")
+		"Name to configure (overrides name from selected gpg key)")
 	rootCmd.Flags().StringVarP(
 		&argEmail,
 		"email",
 		"e",
 		"",
-		"Email to configure (overrides GPG option)")
+		"Email to configure (overrides email from selected gpg key)")
 	rootCmd.Flags().BoolVarP(
 		&forceYes,
 		"yes",
