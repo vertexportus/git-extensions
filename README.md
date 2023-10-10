@@ -3,7 +3,9 @@ This repository contains two custom Git extension commands written in Go. These 
 
 ## Commands
 
- // TODO
+### `git auto-config`
+
+/// TODO
 
 ## Installation
 
