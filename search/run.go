@@ -43,7 +43,7 @@ var rootCmd = &cobra.Command{
 			errors.HandleError(err)
 			fmt.Println(string(output))
 			if pull {
-				fmt.Println(" ___ Pulling...")
+				fmt.Println("pulling...")
 				cmd := exec.Command("git", "pull")
 				output, err := cmd.Output()
 				errors.HandleError(err)
