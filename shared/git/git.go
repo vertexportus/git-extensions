@@ -2,24 +2,24 @@ package git
 
 import (
 	"fmt"
+	"git_extensions/shared/cmd"
 	strs "git_extensions/shared/strings"
 	"os/exec"
 	"strings"
 )
 
 func UpdateConfig(config string, value string) error {
-	cmd := exec.Command("git", "config", config, value)
-	_, err := cmd.Output()
+	command := exec.Command("git", "config", config, value)
+	_, err := command.Output()
 	return err
 }
 
 func CurrentBranch() (string, error) {
-	cmd := exec.Command("git", "branch", "--show-current")
-	output, err := cmd.Output()
+	output, err := cmd.Exec("git", "branch", "--show-current")
 	if err != nil {
 		return "", err
 	}
-	return strs.TrimExecOutput(output), nil
+	return strs.TrimExecOutputStr(output), nil
 }
 
 func Branches(remote bool, track bool) ([]string, error) {
@@ -34,13 +34,13 @@ func Branches(remote bool, track bool) ([]string, error) {
 		format = "%(refname:short)"
 	}
 
-	var cmd *exec.Cmd
+	var command *exec.Cmd
 	if remote {
-		cmd = exec.Command("git", "branch", "--remote", "--format", format)
+		command = exec.Command("git", "branch", "--remote", "--format", format)
 	} else {
-		cmd = exec.Command("git", "branch", "--format", format)
+		command = exec.Command("git", "branch", "--format", format)
 	}
-	output, err := cmd.Output()
+	output, err := command.Output()
 	fmt.Sprintln(output)
 	if err != nil {
 		return nil, err

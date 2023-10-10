@@ -3,5 +3,9 @@ package strings
 import "strings"
 
 func TrimExecOutput(output []byte) string {
-	return strings.Trim(string(output), "\n")
+	return TrimExecOutputStr(string(output))
+}
+
+func TrimExecOutputStr(output string) string {
+	return strings.Trim(output, "\n")
 }

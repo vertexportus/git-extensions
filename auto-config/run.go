@@ -122,7 +122,7 @@ func confirm(name string, email string, sign bool) bool {
 			confirmValueStyle.Render(fmt.Sprintf("%t", sign))))
 	fmt.Println("")
 
-	input := confirmation.New("Are you ready?", confirmation.Yes)
+	input := confirmation.New("Confirm new settings?", confirmation.Yes)
 	confirmed, err := input.RunPrompt()
 	errors.HandleError(err)
 	return confirmed

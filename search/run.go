@@ -2,19 +2,19 @@ package search
 
 import (
 	"fmt"
+	"git_extensions/shared/cmd"
 	"git_extensions/shared/errors"
 	"git_extensions/shared/git"
 	"git_extensions/shared/tui/list"
+	"github.com/erikgeiser/promptkit/confirmation"
 	"github.com/spf13/cobra"
 	"os"
-	"os/exec"
 	"strings"
 )
 
 var checkout bool
 var pull bool
-
-//var merge bool
+var merge bool
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -25,12 +25,17 @@ var rootCmd = &cobra.Command{
 	It also allows for some shorthand operations on top of found results,
 	like merges to current, or checkout and pull`,
 	Args: func(cmd *cobra.Command, args []string) error {
+		// needs at least the search value
 		if err := cobra.MaximumNArgs(1)(cmd, args); err != nil {
 			return err
 		}
+		// cannot use both merge and checkout
+		if merge && checkout {
+			return fmt.Errorf("cannot use both --merge and --checkout")
+		}
 		return nil
 	},
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cobraCmd *cobra.Command, args []string) {
 		searchValue := ""
 		if len(args) > 0 {
 			searchValue = args[0]
@@ -38,16 +43,26 @@ var rootCmd = &cobra.Command{
 		branch := Branch(searchValue)
 
 		if checkout {
-			cmd := exec.Command("git", "checkout", branch)
-			output, err := cmd.Output()
+			checkoutAndPull(branch, pull)
+		}
+		if merge {
+			// get current branch
+			currentBranch, err := git.CurrentBranch()
 			errors.HandleError(err)
-			fmt.Println(string(output))
-			if pull {
-				fmt.Println("pulling...")
-				cmd := exec.Command("git", "pull")
-				output, err := cmd.Output()
-				errors.HandleError(err)
-				fmt.Println(string(output))
+			// checkout to selected branch +pull(if requested)
+			checkoutAndPull(branch, pull)
+			// checkout back to current branch
+			checkoutAndPull(currentBranch, false)
+
+			// confirm merge
+			input := confirmation.New(fmt.Sprintf("Merge %s to %s?", branch, currentBranch), confirmation.Yes)
+			confirm, err := input.RunPrompt()
+			errors.HandleError(err)
+			if confirm {
+				fmt.Println("merging...")
+				cmd.ExecHandleError("git", "merge", branch)
+			} else {
+				fmt.Println("Aborted")
 			}
 		}
 		fmt.Println(branch)
@@ -67,6 +82,12 @@ func init() {
 		"p",
 		false,
 		"pulls selected branch (either after checkout, or before merge)")
+	rootCmd.Flags().BoolVarP(
+		&merge,
+		"merge",
+		"m",
+		false,
+		"merges selected branch to current branch")
 }
 
 func Run() {
@@ -117,4 +138,12 @@ func filterBySearchValue(branches []string, searchValue string) []string {
 		}
 	}
 	return filteredBranches
+}
+
+func checkoutAndPull(branch string, pull bool) {
+	cmd.ExecHandleError("git", "checkout", branch)
+	if pull {
+		fmt.Println("pulling...")
+		cmd.ExecHandleError("git", "pull")
+	}
 }
