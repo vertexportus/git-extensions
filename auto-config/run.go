@@ -46,6 +46,12 @@ var rootCmd = &cobra.Command{
 			if cancel {
 				return
 			}
+			if argName != "" {
+				name = argName
+			}
+			if argEmail != "" {
+				email = argEmail
+			}
 		} else {
 			name = argName
 			email = argEmail
