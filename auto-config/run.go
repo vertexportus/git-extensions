@@ -71,7 +71,7 @@ func init() {
 		&argGpgUse,
 		"gpg",
 		"g",
-		true,
+		false,
 		"List GPG keys to use (also selects name and email)")
 	rootCmd.Flags().BoolVarP(
 		&argGpgSign,
