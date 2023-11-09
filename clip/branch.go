@@ -3,8 +3,12 @@ package clip
 import (
 	"git_extensions/search"
 	"git_extensions/shared/clipboard"
+	shell "git_extensions/shared/cmd"
 	"git_extensions/shared/errors"
 	"git_extensions/shared/git"
+	"runtime"
+	"strings"
+
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +29,14 @@ var branchCmd = &cobra.Command{
 		} else {
 			branch = search.Branch(searchValue)
 		}
-		clipboard.Write(branch)
+		if runtime.GOOS == "linux" {
+			output := shell.ExecHandleError("cat", "/proc/sys/kernel/osrelease")
+			if strings.Contains(output, "microsoft") {
+				shell.Exec("bash", "-c", "echo "+branch+" | CLIP.EXE")
+			}
+		} else {
+			clipboard.Write(branch)
+		}
 	},
 }
 
