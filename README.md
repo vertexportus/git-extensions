@@ -52,7 +52,9 @@ will search local branches that include `term` in their name. By default, it pri
 There are several parameters that modify the behavior of the command in regard to the selected branch:
 
 `[-c|--checkout]` : does a checkout of selected branch
+
 `[-p|--pull]` : will also do a `git pull` on the repository AFTER checkout of selected branch
+
 `[-m|--merge]` : does a merge of selected branch INTO CURRENT BRANCH
 
 ### `git clip`
