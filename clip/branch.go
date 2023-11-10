@@ -27,7 +27,7 @@ var branchCmd = &cobra.Command{
 			branch, err = git.CurrentBranch()
 			errors.HandleError(err)
 		} else {
-			branch = search.Branch(searchValue)
+			branch = search.Branch(searchValue, true)
 		}
 		if runtime.GOOS == "linux" {
 			output := shell.ExecHandleError("cat", "/proc/sys/kernel/osrelease")

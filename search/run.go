@@ -40,7 +40,7 @@ var rootCmd = &cobra.Command{
 		if len(args) > 0 {
 			searchValue = args[0]
 		}
-		branch := Branch(searchValue)
+		branch := Branch(searchValue, false)
 
 		if checkout {
 			checkoutAndPull(branch, pull)
@@ -96,7 +96,7 @@ func Run() {
 	errors.HandleError(err)
 }
 
-func Branch(searchValue string) string {
+func Branch(searchValue string, immediateReturnIfSingle bool) string {
 	// get branches
 	allBranches, err := git.Branches(false, false)
 	errors.HandleError(err)
@@ -110,12 +110,32 @@ func Branch(searchValue string) string {
 	}
 
 	// do list menu
+	if len(branches) == 1 {
+		singleBranch := branches[0]
+		if immediateReturnIfSingle {
+			return singleBranch
+		} else {
+			if confirmBranch(singleBranch) {
+				return singleBranch
+			} else {
+				fmt.Println("No branch selected")
+				os.Exit(1)
+			}
+		}
+	}
 	branch := pickFromListMenu(branches)
 	if branch == nil {
 		fmt.Println("No branch selected")
 		os.Exit(1)
 	}
 	return branch.(string)
+}
+
+func confirmBranch(branch string) bool {
+	input := confirmation.New(fmt.Sprintf("Is this the branch you're looking for? '%s'", branch), confirmation.Yes)
+	confirm, err := input.RunPrompt()
+	errors.HandleError(err)
+	return confirm
 }
 
 func pickFromListMenu(branches []string) any {
