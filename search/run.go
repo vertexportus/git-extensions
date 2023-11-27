@@ -15,6 +15,8 @@ import (
 var checkout bool
 var pull bool
 var merge bool
+var origin bool
+var caseInsensitive bool
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -40,7 +42,7 @@ var rootCmd = &cobra.Command{
 		if len(args) > 0 {
 			searchValue = args[0]
 		}
-		branch := Branch(searchValue, false)
+		branch := Branch(searchValue, origin, caseInsensitive, false)
 
 		if checkout {
 			checkoutAndPull(branch, pull)
@@ -88,6 +90,18 @@ func init() {
 		"m",
 		false,
 		"merges selected branch to current branch")
+	rootCmd.Flags().BoolVarP(
+		&origin,
+		"origin",
+		"o",
+		false,
+		"searches in origin branches")
+	rootCmd.Flags().BoolVarP(
+		&caseInsensitive,
+		"case-insensitive",
+		"i",
+		false,
+		"case insensitive search")
 }
 
 func Run() {
@@ -96,9 +110,9 @@ func Run() {
 	errors.HandleError(err)
 }
 
-func Branch(searchValue string, immediateReturnIfSingle bool) string {
+func Branch(searchValue string, remote bool, caseInsensitive bool, immediateReturnIfSingle bool) string {
 	// get branches
-	allBranches, err := git.Branches(false, false)
+	allBranches, err := git.Branches(remote, false)
 	errors.HandleError(err)
 
 	// filter branches by searchValue - if any
@@ -106,7 +120,7 @@ func Branch(searchValue string, immediateReturnIfSingle bool) string {
 	if searchValue == "" {
 		branches = allBranches
 	} else {
-		branches = filterBySearchValue(allBranches, searchValue)
+		branches = filterBySearchValue(allBranches, searchValue, caseInsensitive)
 	}
 
 	// do list menu
@@ -150,10 +164,18 @@ func pickFromListMenu(branches []string) any {
 	return branchListItem
 }
 
-func filterBySearchValue(branches []string, searchValue string) []string {
+func filterBySearchValue(branches []string, searchValue string, caseInsensitive bool) []string {
+	if caseInsensitive {
+		searchValue = strings.ToLower(searchValue)
+	}
+
 	var filteredBranches []string
 	for _, branch := range branches {
-		if strings.Contains(branch, searchValue) {
+		branchName := branch
+		if caseInsensitive {
+			branchName = strings.ToLower(branchName)
+		}
+		if strings.Contains(branchName, searchValue) {
 			filteredBranches = append(filteredBranches, branch)
 		}
 	}
