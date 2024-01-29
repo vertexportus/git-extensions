@@ -3,9 +3,12 @@ package auto_config
 import (
 	"fmt"
 	strs "git_extensions/shared/strings"
+	"log"
 	"os/exec"
 	"regexp"
 )
+
+const defaultGpgPath = "gpg"
 
 type GpgKey struct {
 	Name  string
@@ -55,11 +58,13 @@ func getGpgExecPath() (string, error) {
 	cmd := exec.Command("git", "config", "gpg.program")
 	output, err := cmd.Output()
 	if err != nil {
-		return "", err
+		log.Printf("error reading command: git config gpg.program = %v", err)
+		log.Printf("fallbacking to gpg as default path")
+		return defaultGpgPath, nil
 	}
 	cleanOutput := strs.TrimExecOutput(output)
 	if cleanOutput == "" {
-		return "gpg", nil
+		return defaultGpgPath, nil
 	}
 	return cleanOutput, nil
 }
