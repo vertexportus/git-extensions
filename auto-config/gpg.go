@@ -6,6 +6,7 @@ import (
 	"log"
 	"os/exec"
 	"regexp"
+	"strings"
 )
 
 const defaultGpgPath = "gpg"
@@ -36,20 +37,32 @@ func GetGpgKeys() ([]GpgKey, error) {
 }
 
 func parseGpgKeys(output string) []GpgKey {
-	// regex to match email and key
-	re := regexp.MustCompile(`(?m)(\w+)\s+uid.*]\s([\w\s]+)\s<(.*)>`)
-	// get all matches
-	matches := re.FindAllStringSubmatch(string(output), -1)
-	keys := make([]GpgKey, len(matches))
-	// iterate over matches
-	for i, match := range matches {
-		// get email and key
-		key := match[1]
-		name := match[2]
-		email := match[3]
-		// add to map
-		keys[i] = GpgKey{Name: name, Email: email, Key: key}
+	lines := strings.Split(output, "\n")
+	var keys []GpgKey
+	var currentKey string
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
+		if match := regexp.MustCompile(`^sec\s+\S+/([A-F0-9]+)`).FindStringSubmatch(line); match != nil {
+			currentKey = match[1]
+			continue
+		}
+
+		if currentKey != "" {
+			if match := regexp.MustCompile(`^uid\s+\[\S+\]\s+(.+)\s<(.+)>`).FindStringSubmatch(line); match != nil {
+				name := match[1]
+				email := match[2]
+				keys = append(keys, GpgKey{
+					Name:  name,
+					Email: email,
+					Key:   currentKey,
+				})
+				currentKey = ""
+			}
+		}
 	}
+
 	return keys
 }
 
@@ -58,8 +71,8 @@ func getGpgExecPath() (string, error) {
 	cmd := exec.Command("git", "config", "gpg.program")
 	output, err := cmd.Output()
 	if err != nil {
-		log.Printf("error reading command: git config gpg.program = %v", err)
-		log.Printf("fallbacking to gpg as default path")
+		log.Printf("gpg.program not configured in git: %v", err)
+		log.Printf("Using default GPG path: %s", defaultGpgPath)
 		return defaultGpgPath, nil
 	}
 	cleanOutput := strs.TrimExecOutput(output)
